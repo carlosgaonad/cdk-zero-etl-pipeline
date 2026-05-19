@@ -106,7 +106,7 @@ export class ZeroEtlStack extends cdk.Stack {
               'redshift:PutResourcePolicy',
               'redshift:GetResourcePolicy',
             ],
-            resources: [props.redshiftNamespaceArn],
+            resources: ['*'],
           }),
         ]),
         installLatestAwsSdk: false,
