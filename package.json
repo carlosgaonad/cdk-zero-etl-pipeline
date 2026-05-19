@@ -1,26 +1,32 @@
 {
   "name": "cdk-zero-etl-pipeline",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "CDK sin miedo: Aurora PostgreSQL + Redshift Serverless + Zero-ETL",
+  "bin": {
+    "cdk-zero-etl-pipeline": "bin/app.js"
+  },
   "scripts": {
-  "build": "tsc",
-  "watch": "tsc -w",
-  "test": "jest",
-  "cdk": "cdk",
-  "synth": "cdk synth",
-  "deploy:demo": "cdk deploy --all -c myIp=$(curl -s ifconfig.me)/32 --require-approval never",
-  "destroy": "cdk destroy --all --force"
-},
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy:demo": "cdk deploy --all -c myIp=$(curl -s ifconfig.me)/32 --require-approval never",
+    "deploy:pipeline": "cdk deploy CdkZeroEtl-Pipeline -c usePipeline=true --require-approval never",
+    "destroy": "cdk destroy --all --force"
+  },
   "devDependencies": {
-    "@types/jest": "^30",
-    "@types/node": "^24.10.1",
-    "jest": "^30",
-    "ts-jest": "^29",
-    "aws-cdk": "2.1122.0",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^22",
+    "aws-cdk": "2.170.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
-    "typescript": "~5.9.3"
+    "typescript": "~5.6.0"
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.254.0",
-    "constructs": "^10.5.0"
+    "aws-cdk-lib": "2.170.0",
+    "constructs": "^10.3.0",
+    "source-map-support": "^0.5.21"
   }
 }

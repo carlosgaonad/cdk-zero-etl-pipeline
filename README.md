@@ -1,14 +1,187 @@
-# Welcome to your CDK TypeScript project
+# cdk-zero-etl-pipeline
 
-This is a blank project for CDK development with TypeScript.
+**CDK sin miedo**: integración Zero-ETL entre **Aurora PostgreSQL** y **Amazon Redshift Serverless** con un CodePipeline self-mutating opcional.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+> **💰 Costo estimado de la demo**
+> Una sesión de 2-3 horas + destruir al terminar: **~$0.50 USD total**.
+> Aurora `db.t4g.medium` cuesta $0.073/hr; Redshift Serverless solo cobra al ejecutar queries; no hay NAT Gateway en modo demo. Detalles en [Costos](#costos).
 
-## Useful commands
+---
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+## Qué construye
+
+Cuatro stacks orquestados en un `cdk.Stage`:
+
+1. **NetworkingStack** — VPC, subnets, security groups (L2 puro)
+2. **AuroraStack** — Aurora PostgreSQL 16.4 provisioned, cluster con 1 sola instance `db.t4g.medium` (L2)
+3. **RedshiftStack** — Namespace + Workgroup de Redshift Serverless (L1)
+4. **ZeroEtlStack** — Resource policy + `rds.CfnIntegration` (L1)
+
+Opcionalmente:
+
+5. **PipelineStack** — CodePipeline self-mutating que despliega los 4 anteriores en cada `git push`
+
+---
+
+## Por qué esta configuración
+
+| Decisión | Razón |
+|---|---|
+| **Aurora provisioned** (no Serverless v2) | Más predecible y barato para una demo corta. Serverless v2 mínimo es 0.5 ACU = $0.06/hr; t4g.medium = $0.073/hr pero sin sorpresas de auto-scaling |
+| **db.t4g.medium** | La instance class **más pequeña permitida** en Aurora PG. Aurora no soporta t3.small ni t4g.small |
+| **Sin readers** | 1 sola writer ahorra otro $0.073/hr |
+| **1 cluster, no Serverless v2** | Zero-ETL fuerza logical replication, lo que impide el auto-pause de Serverless v2 — así que el "scale to zero" no aplica de todos modos |
+| **Redshift Serverless** | Solo cobra cuando ejecutas queries. En idle = $0 |
+| **3 AZs en la VPC** | Redshift Serverless requiere subnets en mínimo 2 AZs (sin EVR) desde julio 2025. Usamos 3 para máxima compatibilidad regional; en modo demo no hay NAT, así que la 3a AZ no cuesta nada |
+| **public subnets en demo** | 0 NAT Gateways = ahorras $32/mes por NAT |
+
+---
+
+## Costos
+
+| Recurso | Precio | Demo 3h |
+|---|---|---|
+| Aurora `db.t4g.medium` (1 writer) | $0.073/hr | $0.22 |
+| Aurora storage (Standard, prorrateado) | $0.10/GB-mes | <$0.05 |
+| Redshift Serverless workgroup idle | $0 | $0 |
+| Redshift Serverless queries | $0.375 por RPU-hr × 8 RPU | ~$0.10 si haces queries |
+| NAT Gateway (modo demo) | $0 | $0 |
+| Secrets Manager (2 secrets) | $0.40/mes c/u prorrateado | <$0.01 |
+| VPC, subnets, IGW | Gratis | $0 |
+| **Total demo 3h + destruir** | | **~$0.40-0.50 USD** |
+
+> Si dejas todo encendido **24 horas seguidas** sin destruir: ~$2.50/día.
+> Por eso es **crítico** ejecutar `cdk destroy --all --force` al terminar.
+
+---
+
+## Estructura del proyecto
+
+```
+cdk-zero-etl-pipeline/
+├── bin/
+│   └── app.ts                       # Entry point con switch demo/pipeline
+├── lib/
+│   ├── pipeline-stack.ts            # CodePipeline opcional
+│   ├── stages/
+│   │   └── deploy-stage.ts          # Stage que agrupa los 4 stacks
+│   └── stacks/
+│       ├── networking-stack.ts      # VPC + SGs (flag demoMode)
+│       ├── aurora-stack.ts          # Aurora PostgreSQL t4g.medium
+│       ├── redshift-stack.ts        # Redshift Serverless (L1)
+│       └── zero-etl-stack.ts        # CfnIntegration + resource policy
+├── sql/
+│   ├── 01-aurora-source.sql         # Schema + datos en Aurora
+│   └── 02-redshift-target.sql       # CREATE DATABASE FROM INTEGRATION
+├── test/
+│   └── stacks.test.ts               # 25 tests unitarios
+├── cdk.json
+├── jest.config.js
+├── package.json
+├── tsconfig.json
+├── README.md                        # Este archivo
+└── VIDEO_GUIDE.md                   # Guion paso a paso para el video
+```
+
+---
+
+## Modos de despliegue
+
+Dos modos controlados por flags de contexto CDK:
+
+| Flag | Default | Qué hace |
+|---|---|---|
+| `demoMode` | `true` | Public subnets, 0 NAT, DBs accesibles por tu IP/32 |
+| `usePipeline` | `false` | `true` despliega un CodePipeline self-mutating |
+| `myIp` | (vacío) | IP/32 desde donde te conectas (solo demo) |
+
+Combinaciones:
+
+```bash
+# Demo más simple (deploy directo)
+npx cdk deploy --all -c myIp=$(curl -s ifconfig.me)/32
+
+# Demo con pipeline (cada push despliega)
+npx cdk deploy CdkZeroEtl-Pipeline -c usePipeline=true -c myIp=...
+
+# Producción
+npx cdk deploy --all -c demoMode=false
+```
+
+---
+
+## Quick start
+
+```bash
+npm install
+npm test                                          # 25 tests
+npx cdk bootstrap aws://TU_ACCOUNT/us-east-1      # una sola vez
+export MY_IP=$(curl -s ifconfig.me)/32
+npx cdk deploy --all -c myIp=$MY_IP --require-approval never
+```
+
+**Tiempo de deploy:** ~12-15 min (Aurora provisioned tarda ~8 min, más rápido que Serverless v2).
+
+Después del deploy, en el Redshift Query Editor v2:
+
+```sql
+SELECT integration_id FROM svv_integration;
+CREATE DATABASE aurora_data FROM INTEGRATION '<id>' DATABASE demodb;
+```
+
+---
+
+## Para el video tutorial paso a paso
+
+Ver **[VIDEO_GUIDE.md](VIDEO_GUIDE.md)**. Es el guion estructurado para grabar la demo:
+crear el proyecto desde cero, ir agregando los stacks uno por uno, commit, deploy y verificar Zero-ETL en vivo.
+
+---
+
+## Tests
+
+```bash
+npm test
+```
+
+| Stack | Qué valida |
+|---|---|
+| NetworkingStack (demo) | 1 VPC, 0 NAT, public subnets, SG con tu IP |
+| NetworkingStack (prod) | 2 NAT, 3 capas de subnets |
+| AuroraStack | Cluster PG, 1 instance, **db.t4g.medium**, enhanced_logical_replication, no es serverless |
+| RedshiftStack | Namespace + workgroup, manageAdminPassword, case_sensitive |
+| ZeroEtlStack | CfnIntegration, ARNs, Custom Resource, **acción IAM correcta** |
+| PipelineStack | CodePipeline + CodeBuild |
+
+---
+
+## Eliminar todo al finalizar
+
+```sql
+-- En Redshift Query Editor v2
+DROP DATABASE aurora_data;
+```
+
+```bash
+npx cdk destroy --all --force
+aws secretsmanager delete-secret --secret-id zero-etl/aurora/admin \
+  --force-delete-without-recovery --region us-east-1
+```
+
+Verifica que no queda nada:
+
+```bash
+aws cloudformation list-stacks \
+  --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
+  --query 'StackSummaries[?contains(StackName, `CdkZeroEtl`)].StackName' \
+  --output table
+
+aws rds describe-db-clusters --query 'DBClusters[].DBClusterIdentifier' --output table
+aws redshift-serverless list-workgroups --query 'workgroups[].workgroupName' --output table
+```
+
+---
+
+## Licencia
+
+MIT
