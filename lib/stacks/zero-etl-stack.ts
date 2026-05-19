@@ -110,8 +110,9 @@ export class ZeroEtlStack extends cdk.Stack {
       integrationName: 'rds-pg-to-redshift-zero-etl',
       sourceArn: props.sourceArn,
       targetArn: props.redshiftNamespaceArn,
-      // dataFilter opcional: replicar solo ciertas tablas.
-      // dataFilter: 'include: demodb.public.*',
+      // Filtra todas las tablas del schema public de demodb.
+      // Sintaxis Aurora PG: database.schema.table (* = wildcard)
+      dataFilter: 'include: demodb.public.*',
     });
 
     // La integración debe esperar a que la policy esté lista.

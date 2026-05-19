@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import {
   CodePipeline,
   CodePipelineSource,
+  ManualApprovalStep,
   ShellStep,
 } from 'aws-cdk-lib/pipelines';
 import { DeployStage } from './stages/deploy-stage';
@@ -69,12 +70,19 @@ export class PipelineStack extends cdk.Stack {
     });
 
     // ── Stage: Deploy ─────────────────────────────
-    pipeline.addStage(
-      new DeployStage(this, 'Deploy', {
-        env: props.env,
-        demoMode: props.demoMode,
-        myIpCidr: props.myIpCidr,
-      }),
-    );
+    const deployStage = new DeployStage(this, 'Deploy', {
+      env: props.env,
+      demoMode: props.demoMode,
+      myIpCidr: props.myIpCidr,
+    });
+
+    pipeline.addStage(deployStage, {
+      stackSteps: [
+        {
+          stack: deployStage.zeroEtlStack,
+          pre: [new ManualApprovalStep('Approve-ZeroETL-Integration')],
+        },
+      ],
+    });
   }
 }

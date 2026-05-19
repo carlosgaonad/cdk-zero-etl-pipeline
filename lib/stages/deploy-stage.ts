@@ -17,6 +17,7 @@ export interface DeployStageProps extends cdk.StageProps {
  *   Networking → Aurora & Redshift (en paralelo) → ZeroEtl
  */
 export class DeployStage extends cdk.Stage {
+  public readonly zeroEtlStack: ZeroEtlStack;
   constructor(scope: Construct, id: string, props: DeployStageProps) {
     super(scope, id, props);
 
@@ -49,14 +50,14 @@ export class DeployStage extends cdk.Stage {
     redshift.addDependency(networking);
 
     // ── 4. Zero-ETL Integration ───────────────────
-    const zeroEtl = new ZeroEtlStack(this, 'ZeroEtlStack', {
+    this.zeroEtlStack = new ZeroEtlStack(this, 'ZeroEtlStack', {
       env: props.env,
       description: 'Integración Zero-ETL: Aurora PostgreSQL → Redshift',
       sourceArn: aurora.clusterArn,
       redshiftNamespaceArn: redshift.namespaceArn,
       redshiftNamespaceName: redshift.namespaceName,
     });
-    zeroEtl.addDependency(aurora);
-    zeroEtl.addDependency(redshift);
+    this.zeroEtlStack.addDependency(aurora);
+    this.zeroEtlStack.addDependency(redshift);
   }
 }
