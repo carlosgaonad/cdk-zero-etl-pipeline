@@ -48,7 +48,6 @@ export class ZeroEtlStack extends cdk.Stack {
           Effect: 'Allow',
           Principal: { Service: 'redshift.amazonaws.com' },
           Action: 'redshift:AuthorizeInboundIntegration',
-          Resource: props.redshiftNamespaceArn,
           Condition: {
             StringEquals: {
               'aws:SourceArn': props.sourceArn,
@@ -60,7 +59,6 @@ export class ZeroEtlStack extends cdk.Stack {
           Effect: 'Allow',
           Principal: { AWS: `arn:aws:iam::${accountId}:root` },
           Action: 'redshift:CreateInboundIntegration',
-          Resource: props.redshiftNamespaceArn,
         },
       ],
     });
