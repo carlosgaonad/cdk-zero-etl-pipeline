@@ -101,7 +101,8 @@ export class RedshiftStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'WorkgroupPort', {
-      value: cdk.Token.asString(workgroup.attrWorkgroupEndpointPort),
+      value: '5439',
+      description: 'Puerto de conexión Redshift Serverless (siempre 5439)',
     });
 
     new cdk.CfnOutput(this, 'AdminSecretCommand', {
