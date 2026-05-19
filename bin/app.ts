@@ -46,11 +46,16 @@ if (usePipeline) {
   // ============================================================================
 
   // ⚠️ AJUSTA estos valores con los datos de tu repo:
-  const githubOwner = process.env.GITHUB_OWNER ?? 'TU_USUARIO';
-  const githubRepo = process.env.GITHUB_REPO ?? 'cdk-zero-etl-pipeline';
-  const githubBranch = process.env.GITHUB_BRANCH ?? 'main';
+  const githubOwner =
+    app.node.tryGetContext('githubOwner') ?? process.env.GITHUB_OWNER ?? 'TU_USUARIO';
+  const githubRepo =
+    app.node.tryGetContext('githubRepo') ?? process.env.GITHUB_REPO ?? 'cdk-zero-etl-pipeline';
+  const githubBranch =
+    app.node.tryGetContext('githubBranch') ?? process.env.GITHUB_BRANCH ?? 'main';
   const githubTokenSecretName =
-    process.env.GITHUB_TOKEN_SECRET ?? 'github-token';
+    app.node.tryGetContext('githubTokenSecret') ??
+    process.env.GITHUB_TOKEN_SECRET ??
+    'github-token';
 
   new PipelineStack(app, 'CdkZeroEtl-Pipeline', {
     env,

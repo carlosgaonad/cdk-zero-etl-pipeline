@@ -61,7 +61,7 @@ export class PipelineStack extends cdk.Stack {
         commands: [
           'npm run build',
           // Importante: el pipeline también necesita los flags de contexto.
-          `npx cdk synth -c demoMode=${props.demoMode} -c usePipeline=true${
+          `npx cdk synth -c demoMode=${props.demoMode} -c usePipeline=true -c githubOwner=${props.githubOwner} -c githubRepo=${props.githubRepo} -c githubBranch=${props.githubBranch} -c githubTokenSecret=${props.githubTokenSecretName}${
             props.myIpCidr ? ` -c myIp=${props.myIpCidr}` : ''
           }`,
         ],
