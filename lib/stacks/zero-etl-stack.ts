@@ -71,6 +71,12 @@ export class ZeroEtlStack extends cdk.Stack {
       ],
     });
 
+    // IMPORTANTE — case sensitivity:
+    //   service='Redshift' usa @aws-sdk/client-redshift (API Query/XML).
+    //   Los parámetros deben ir en PascalCase: ResourceArn y Policy.
+    //   En camelCase, CFN reporta:
+    //     "Value null at 'resourceArn' failed to satisfy constraint…"
+    //   porque el SDK ignora los campos desconocidos y envía la request vacía.
     const putResourcePolicy = new cr.AwsCustomResource(
       this,
       'PutResourcePolicy',
@@ -79,8 +85,8 @@ export class ZeroEtlStack extends cdk.Stack {
           service: 'Redshift',
           action: 'putResourcePolicy',
           parameters: {
-            resourceArn: props.redshiftNamespaceArn,
-            policy: resourcePolicyDocument,
+            ResourceArn: props.redshiftNamespaceArn,
+            Policy: resourcePolicyDocument,
           },
           physicalResourceId: cr.PhysicalResourceId.of(
             `rp-${props.redshiftNamespaceName}`,
@@ -90,8 +96,8 @@ export class ZeroEtlStack extends cdk.Stack {
           service: 'Redshift',
           action: 'putResourcePolicy',
           parameters: {
-            resourceArn: props.redshiftNamespaceArn,
-            policy: resourcePolicyDocument,
+            ResourceArn: props.redshiftNamespaceArn,
+            Policy: resourcePolicyDocument,
           },
           physicalResourceId: cr.PhysicalResourceId.of(
             `rp-${props.redshiftNamespaceName}`,
