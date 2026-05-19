@@ -40,7 +40,13 @@ export class ZeroEtlStack extends cdk.Stack {
     const accountId = cdk.Stack.of(this).account;
 
     // ── Paso 1: Resource policy en el namespace ──
-    const resourcePolicyDocument = JSON.stringify({
+    // IMPORTANTE: usar Stack.toJsonString() en lugar de JSON.stringify().
+    // Los valores como props.sourceArn y accountId son tokens CDK (Fn::ImportValue,
+    // Ref, etc.). JSON.stringify() los embebe como strings literales del placeholder,
+    // que luego CloudFormation no puede resolver dentro de un string JSON.
+    // toJsonString() genera un Fn::Join que CloudFormation resuelve ANTES de
+    // invocar el Lambda, asegurando que el Lambda reciba los ARNs reales.
+    const resourcePolicyDocument = cdk.Stack.of(this).toJsonString({
       Version: '2012-10-17',
       Statement: [
         {
