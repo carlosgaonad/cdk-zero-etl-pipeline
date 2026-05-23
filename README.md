@@ -15,11 +15,11 @@ Cuatro stacks orquestados en un `cdk.Stage`:
 1. **NetworkingStack** — VPC, subnets, security groups (L2 puro)
 2. **AuroraStack** — Aurora PostgreSQL 16.4 provisioned, cluster con 1 sola instance `db.t4g.medium` (L2)
 3. **RedshiftStack** — Namespace + Workgroup de Redshift Serverless (L1)
-4. **ZeroEtlStack** — Resource policy + `rds.CfnIntegration` (L1)
+4. **ZeroEtlStack** — Resource policy + `rds.CfnIntegration` con `dataFilter: 'include: demodb.public.*'` (L1)
 
 Opcionalmente:
 
-5. **PipelineStack** — CodePipeline self-mutating que despliega los 4 anteriores en cada `git push`
+5. **PipelineStack** — CodePipeline self-mutating con `ManualApprovalStep` antes de desplegar `ZeroEtlStack`; se autodespliega en cada `git push`
 
 ---
 
@@ -79,8 +79,7 @@ cdk-zero-etl-pipeline/
 ├── jest.config.js
 ├── package.json
 ├── tsconfig.json
-├── README.md                        # Este archivo
-└── VIDEO_GUIDE.md                   # Guion paso a paso para el video
+└── README.md                        # Este archivo
 ```
 
 ---
@@ -101,8 +100,8 @@ Combinaciones:
 # Demo más simple (deploy directo)
 npx cdk deploy --all -c myIp=$(curl -s ifconfig.me)/32
 
-# Demo con pipeline (cada push despliega)
-npx cdk deploy CdkZeroEtl-Pipeline -c usePipeline=true -c myIp=...
+# Demo con pipeline (ver sección Pipeline más abajo)
+npx cdk deploy CdkZeroEtl-Pipeline -c usePipeline=true -c myIp=$MY_IP --require-approval never
 
 # Producción
 npx cdk deploy --all -c demoMode=false
@@ -111,6 +110,8 @@ npx cdk deploy --all -c demoMode=false
 ---
 
 ## Quick start
+
+### Deploy directo (demo local)
 
 ```bash
 npm install
@@ -129,13 +130,34 @@ SELECT integration_id FROM svv_integration;
 CREATE DATABASE aurora_data FROM INTEGRATION '<id>' DATABASE demodb;
 ```
 
----
+### Deploy con Pipeline (self-mutating)
 
-## Para el video tutorial paso a paso
+```bash
+# 1. Crear PAT en GitHub: Settings → Developer settings → Personal access tokens
+#    Scopes: repo, admin:repo_hook
 
-Ver **[VIDEO_GUIDE.md](VIDEO_GUIDE.md)**. Es el guion estructurado para grabar la demo:
-crear el proyecto desde cero, ir agregando los stacks uno por uno, commit, deploy y verificar Zero-ETL en vivo.
+# 2. Guardarlo en Secrets Manager
+aws secretsmanager create-secret \
+  --name github-token \
+  --secret-string "ghp_TU_TOKEN" \
+  --region us-east-1
 
+# 3. Configurar tu owner/repo en bin/app.ts o por env
+export GITHUB_OWNER=tu-usuario
+export GITHUB_REPO=cdk-zero-etl-pipeline
+
+# 4. Deploy SOLO el PipelineStack
+npx cdk deploy CdkZeroEtl-Pipeline \
+  -c usePipeline=true \
+  -c myIp=$MY_IP \
+  --require-approval never
+```
+
+> El pipeline tiene un paso de **aprobación manual** (`ManualApprovalStep`) antes de desplegar `ZeroEtlStack`. Tienes que poblar la DB Aurora con el script sql/01-aurora-source.sql usando la terminal. Aprueba el pipeline desde la consola de CodePipeline cuando quieras activar la integración Zero-ETL.
+
+
+>Copia el ID de la integración de ZeroETL.
+>Luego ve a Redshift Query EditorV2 y usa el script sql/02-redshift-target.sql para crear la DB usando la integración.
 ---
 
 ## Tests
@@ -150,8 +172,8 @@ npm test
 | NetworkingStack (prod) | 2 NAT, 3 capas de subnets |
 | AuroraStack | Cluster PG, 1 instance, **db.t4g.medium**, enhanced_logical_replication, no es serverless |
 | RedshiftStack | Namespace + workgroup, manageAdminPassword, case_sensitive |
-| ZeroEtlStack | CfnIntegration, ARNs, Custom Resource, **acción IAM correcta** |
-| PipelineStack | CodePipeline + CodeBuild |
+| ZeroEtlStack | CfnIntegration, ARNs, Custom Resource, **acción IAM correcta**, dataFilter |
+| PipelineStack | CodePipeline + CodeBuild + ManualApprovalStep |
 
 ---
 
