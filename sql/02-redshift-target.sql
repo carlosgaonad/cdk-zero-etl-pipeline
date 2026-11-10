@@ -21,10 +21,12 @@ CREATE DATABASE aurora_data
   DATABASE demodb;
 
 -- Verificar el estado de la replicación inicial:
-SELECT integration_id, target_database, state, last_commit_timestamp
+SELECT schema_name, table_name, table_state, reason, last_updated_timestamp
 FROM svv_integration_table_state
-ORDER BY last_commit_timestamp DESC;
--- Estados esperados: Synced (ok), ResyncInitiated, ResyncRequired, Failed.
+ORDER BY last_updated_timestamp DESC;
+-- Estados posibles: Synced (ok), ResyncInitiated, ResyncRequired, Failed,
+-- Deleted, DroppedSource. Si una tabla queda en Failed, la columna "reason"
+-- dice por qué (lo más común: la tabla no tiene PRIMARY KEY).
 
 -- ----------------------------------------------------------------------------
 -- 2. Una vez en estado Synced: consultas analíticas

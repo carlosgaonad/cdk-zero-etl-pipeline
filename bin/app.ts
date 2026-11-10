@@ -27,7 +27,7 @@ if (demoMode && !myIpCidr) {
   console.warn(
     '\n⚠️  DEMO MODE sin IP restringida.\n' +
       '   Los security groups quedarán SIN reglas de ingress.\n' +
-      '   Para abrir solo a tu IP: cdk deploy -c myIp=$(curl -s ifconfig.me)/32\n',
+      '   Para abrir solo a tu IP: npx cdk deploy --all -c myIp="$(curl -s https://checkip.amazonaws.com)/32"\n',
   );
 }
 
