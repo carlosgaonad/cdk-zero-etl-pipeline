@@ -15,6 +15,9 @@
     "deploy:pipeline": "cdk deploy CdkZeroEtl-Pipeline -c usePipeline=true --require-approval never",
     "destroy": "cdk destroy --all --force"
   },
+  "engines": {
+    "node": ">=22 <23"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^22",

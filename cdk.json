@@ -15,6 +15,7 @@
     ]
   },
   "context": {
+    "acknowledged-issue-numbers": [34892, 32775],
     "demoMode": "true",
     "usePipeline": "false",
     "githubOwner": "carlosgaonad",

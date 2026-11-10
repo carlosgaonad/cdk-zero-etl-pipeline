@@ -116,7 +116,7 @@ npx cdk deploy --all -c demoMode=false
 
 | Herramienta | Versión |
 |---|---|
-| Node.js | 22.x o 24.x LTS (CDK ya no soporta 18 ni 20) |
+| Node.js | 22.x LTS (la versión que soporta el CDK fijado en el proyecto; con `nvm` basta `nvm use`, gracias a `.nvmrc`) |
 | AWS CLI | v2, con credenciales configuradas (`aws sts get-caller-identity` debe funcionar) |
 | Git | cualquiera reciente |
 | psql (cliente PostgreSQL) | cualquiera reciente, o DBeaver como alternativa gráfica |
