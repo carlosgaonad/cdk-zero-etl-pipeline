@@ -15,7 +15,7 @@ export interface AuroraStackProps extends cdk.StackProps {
  *
  * Configuración MÍNIMA para una demo de bajo costo:
  *
- *   - Engine: Aurora PostgreSQL 16.4
+ *   - Engine: Aurora PostgreSQL 16.8 (LTS, soporte estándar hasta feb-2029)
  *   - Cluster con 1 sola writer instance (sin readers)
  *   - Instance class: db.t4g.medium (la más pequeña permitida en Aurora PG)
  *     Aurora PG no soporta db.t3.small ni db.t4g.small. Las opciones mínimas
@@ -45,8 +45,12 @@ export class AuroraStack extends cdk.Stack {
     super(scope, id, props);
 
     // ── Engine ───────────────────────────────────
+    // 16.4 ya salió del soporte estándar de Aurora y no permite crear
+    // clusters nuevos. Usamos 16.8 (LTS). `.of()` permite usar versiones
+    // más nuevas que las que trae el enum de esta versión de aws-cdk-lib.
+    // Zero-ETL con Aurora PostgreSQL requiere 16.4+ o 17.4+.
     const engine = rds.DatabaseClusterEngine.auroraPostgres({
-      version: rds.AuroraPostgresEngineVersion.VER_16_4,
+      version: rds.AuroraPostgresEngineVersion.of('16.8', '16'),
     });
 
     // ── Cluster parameter group (Zero-ETL requirements) ──

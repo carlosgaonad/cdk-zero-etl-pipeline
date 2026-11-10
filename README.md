@@ -2,9 +2,12 @@
 
 **CDK sin miedo**: integración Zero-ETL entre **Aurora PostgreSQL** y **Amazon Redshift Serverless** con un CodePipeline self-mutating opcional.
 
-> **💰 Costo estimado de la demo**
-> Una sesión de 2-3 horas + destruir al terminar: **~$0.50 USD total**.
-> Aurora `db.t4g.medium` cuesta $0.073/hr; Redshift Serverless solo cobra al ejecutar queries; no hay NAT Gateway en modo demo. Detalles en [Costos](#costos).
+> **💰 Costo estimado del laboratorio**
+> Una sesión de 2-3 horas + destruir al terminar: **entre 1 y 6 USD**.
+> Aurora `db.t4g.medium` cuesta ~$0.073/hr y Redshift Serverless cobra por segundo mientras ejecuta queries **y mientras procesa los cambios que llegan por Zero-ETL**. No hay NAT Gateway en modo demo. Detalles en [Costos](#costos).
+
+> **📋 Requisitos de la cuenta**
+> Redshift no está disponible en el plan **Free** de las cuentas nuevas de AWS: necesitas el plan **Paid**. Si nunca has usado Redshift Serverless, puedes ser elegible para el [crédito de prueba de $300](https://aws.amazon.com/redshift/free-trial/).
 
 ---
 
@@ -13,7 +16,7 @@
 Cuatro stacks orquestados en un `cdk.Stage`:
 
 1. **NetworkingStack** — VPC, subnets, security groups (L2 puro)
-2. **AuroraStack** — Aurora PostgreSQL 16.4 provisioned, cluster con 1 sola instance `db.t4g.medium` (L2)
+2. **AuroraStack** — Aurora PostgreSQL 16.8 (LTS) provisioned, cluster con 1 sola instance `db.t4g.medium` (L2)
 3. **RedshiftStack** — Namespace + Workgroup de Redshift Serverless (L1)
 4. **ZeroEtlStack** — Resource policy + `rds.CfnIntegration` con `dataFilter: 'include: demodb.public.*'` (L1)
 
@@ -27,11 +30,12 @@ Opcionalmente:
 
 | Decisión | Razón |
 |---|---|
+| **Aurora PostgreSQL 16.8 (LTS)** | Zero-ETL requiere 16.4+; la 16.4 ya salió del soporte estándar. 16.8 es LTS, con soporte hasta feb-2029 |
 | **Aurora provisioned** (no Serverless v2) | Más predecible y barato para una demo corta. Serverless v2 mínimo es 0.5 ACU = $0.06/hr; t4g.medium = $0.073/hr pero sin sorpresas de auto-scaling |
 | **db.t4g.medium** | La instance class **más pequeña permitida** en Aurora PG. Aurora no soporta t3.small ni t4g.small |
 | **Sin readers** | 1 sola writer ahorra otro $0.073/hr |
 | **1 cluster, no Serverless v2** | Zero-ETL fuerza logical replication, lo que impide el auto-pause de Serverless v2 — así que el "scale to zero" no aplica de todos modos |
-| **Redshift Serverless** | Solo cobra cuando ejecutas queries. En idle = $0 |
+| **Redshift Serverless** | Cobra por segundo (mínimo 60 s) solo cuando hay trabajo: tus queries y el procesamiento de la replicación Zero-ETL |
 | **3 AZs en la VPC** | Redshift Serverless requiere subnets en mínimo 2 AZs (sin EVR) desde julio 2025. Usamos 3 para máxima compatibilidad regional; en modo demo no hay NAT, así que la 3a AZ no cuesta nada |
 | **public subnets en demo** | 0 NAT Gateways = ahorras $32/mes por NAT |
 
@@ -43,14 +47,13 @@ Opcionalmente:
 |---|---|---|
 | Aurora `db.t4g.medium` (1 writer) | $0.073/hr | $0.22 |
 | Aurora storage (Standard, prorrateado) | $0.10/GB-mes | <$0.05 |
-| Redshift Serverless workgroup idle | $0 | $0 |
-| Redshift Serverless queries | $0.375 por RPU-hr × 8 RPU | ~$0.10 si haces queries |
+| Redshift Serverless (8 RPU base) | $0.375 por RPU-hr = $3/hr mientras está activo | $0.50-5 (queries + replicación) |
 | NAT Gateway (modo demo) | $0 | $0 |
 | Secrets Manager (2 secrets) | $0.40/mes c/u prorrateado | <$0.01 |
 | VPC, subnets, IGW | Gratis | $0 |
-| **Total demo 3h + destruir** | | **~$0.40-0.50 USD** |
+| **Total demo 3h + destruir** | | **~$1-6 USD** |
 
-> Si dejas todo encendido **24 horas seguidas** sin destruir: ~$2.50/día.
+> Si dejas todo encendido **24 horas seguidas** sin destruir: Aurora sola suma ~$1.75/día, más el cómputo de Redshift.
 > Por eso es **crítico** ejecutar `cdk destroy --all --force` al terminar.
 
 ---
@@ -109,15 +112,30 @@ npx cdk deploy --all -c demoMode=false
 
 ---
 
+## Prerequisitos
+
+| Herramienta | Versión |
+|---|---|
+| Node.js | 22.x o 24.x LTS (CDK ya no soporta 18 ni 20) |
+| AWS CLI | v2, con credenciales configuradas (`aws sts get-caller-identity` debe funcionar) |
+| Git | cualquiera reciente |
+| psql (cliente PostgreSQL) | cualquiera reciente, o DBeaver como alternativa gráfica |
+
+En Windows, usa **WSL2** (Ubuntu): todos los comandos de este README son de Bash.
+
+Usa siempre `npx cdk` (no `cdk` global) para trabajar con la versión de CDK fijada en `package-lock.json`.
+
+---
+
 ## Quick start
 
 ### Deploy directo (demo local)
 
 ```bash
-npm install
+npm ci
 npm test                                          # 25 tests
 npx cdk bootstrap aws://TU_ACCOUNT/us-east-1      # una sola vez
-export MY_IP=$(curl -s ifconfig.me)/32
+export MY_IP="$(curl -s https://checkip.amazonaws.com)/32"
 npx cdk deploy --all -c myIp=$MY_IP --require-approval never
 ```
 
@@ -142,9 +160,9 @@ aws secretsmanager create-secret \
   --secret-string "ghp_TU_TOKEN" \
   --region us-east-1
 
-# 3. Configurar tu owner/repo en bin/app.ts o por env
-export GITHUB_OWNER=tu-usuario
-export GITHUB_REPO=cdk-zero-etl-pipeline
+# 3. Haz fork del repo y cambia "githubOwner" en cdk.json por tu usuario
+#    (el valor de cdk.json tiene prioridad sobre las variables de entorno).
+#    Haz commit y push de ese cambio antes de desplegar el pipeline.
 
 # 4. Deploy SOLO el PipelineStack
 npx cdk deploy CdkZeroEtl-Pipeline \
@@ -152,6 +170,8 @@ npx cdk deploy CdkZeroEtl-Pipeline \
   -c myIp=$MY_IP \
   --require-approval never
 ```
+
+> **Limpieza en modo pipeline:** borrar `CdkZeroEtl-Pipeline` NO borra los stacks que desplegó. Primero `DROP DATABASE aurora_data;` en Redshift y luego borra en CloudFormation, en orden: `Deploy-ZeroEtlStack`, `Deploy-RedshiftStack`, `Deploy-AuroraStack`, `Deploy-NetworkingStack`. Al final, el stack del pipeline y el secret `github-token`.
 
 > El pipeline tiene un paso de **aprobación manual** (`ManualApprovalStep`) antes de desplegar `ZeroEtlStack`. Tienes que poblar la DB Aurora con el script sql/01-aurora-source.sql usando la terminal. Aprueba el pipeline desde la consola de CodePipeline cuando quieras activar la integración Zero-ETL.
 
@@ -206,4 +226,4 @@ aws redshift-serverless list-workgroups --query 'workgroups[].workgroupName' --o
 
 ## Licencia
 
-MIT
+MIT — ver [LICENSE](LICENSE).

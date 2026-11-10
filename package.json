@@ -11,7 +11,7 @@
     "test": "jest",
     "cdk": "cdk",
     "synth": "cdk synth",
-    "deploy:demo": "cdk deploy --all -c myIp=$(curl -s ifconfig.me)/32 --require-approval never",
+    "deploy:demo": "cdk deploy --all -c myIp=$(curl -s https://checkip.amazonaws.com)/32 --require-approval never",
     "deploy:pipeline": "cdk deploy CdkZeroEtl-Pipeline -c usePipeline=true --require-approval never",
     "destroy": "cdk destroy --all --force"
   },

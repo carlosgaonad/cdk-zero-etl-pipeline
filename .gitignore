@@ -4,3 +4,5 @@ node_modules/
 *.d.ts
 !jest.config.js
 .env
+# Contexto local de CDK (contiene el ID de tu cuenta)
+cdk.context.json
