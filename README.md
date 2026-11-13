@@ -1,6 +1,19 @@
 # cdk-zero-etl-pipeline
 
-**CDK sin miedo**: integración Zero-ETL entre **Aurora PostgreSQL** y **Amazon Redshift Serverless** con un CodePipeline self-mutating opcional.
+**CDK sin miedo**: integración Zero-ETL entre **Aurora PostgreSQL** y **Amazon Redshift Serverless**, desplegada con AWS CDK (TypeScript) y un CodePipeline self-mutating opcional.
+
+> 🇬🇧 **English:** CDK project that deploys an Aurora PostgreSQL → Redshift Serverless Zero-ETL integration. Follow the step-by-step lab in **[LAB.en.md](LAB.en.md)**.
+
+![Arquitectura del laboratorio](docs/images/arquitectura-es.jpg)
+
+## 👉 Empieza aquí
+
+| | Español | English |
+|---|---|---|
+| Laboratorio paso a paso (macOS, Linux y Windows) | **[LAB.md](LAB.md)** | **[LAB.en.md](LAB.en.md)** |
+| Artículo con los conceptos (Medium) | _(enlace al artículo)_ | _(link to the article)_ |
+
+El laboratorio explica desde la creación de la cuenta y la instalación de herramientas hasta la limpieza final, con una verificación al terminar cada paso. El resto de este README es una referencia rápida para quien ya conoce CDK.
 
 > **💰 Costo estimado del laboratorio**
 > Una sesión de 2-3 horas + destruir al terminar: **entre 1 y 6 USD**.
@@ -82,6 +95,9 @@ cdk-zero-etl-pipeline/
 ├── jest.config.js
 ├── package.json
 ├── tsconfig.json
+├── docs/images/                     # Diagramas de arquitectura (ES / EN)
+├── LAB.md                           # Laboratorio paso a paso (español)
+├── LAB.en.md                        # Step-by-step lab (English)
 └── README.md                        # Este archivo
 ```
 
@@ -128,6 +144,8 @@ Usa siempre `npx cdk` (no `cdk` global) para trabajar con la versión de CDK fij
 ---
 
 ## Quick start
+
+> ¿Primera vez con CDK o con AWS? Sigue el [laboratorio completo](LAB.md) en lugar de este resumen.
 
 ### Deploy directo (demo local)
 
@@ -198,6 +216,8 @@ npm test
 ---
 
 ## Eliminar todo al finalizar
+
+> La guía completa, con verificación y el caso del modo pipeline, está en [LAB.md › Limpieza](LAB.md#limpieza-borra-todo-al-terminar).
 
 ```sql
 -- En Redshift Query Editor v2
