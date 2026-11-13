@@ -4,7 +4,7 @@
 
 This guide takes you from zero to Aurora PostgreSQL replicating data into Redshift Serverless in near real time, with a single `npx cdk deploy`. It works on macOS, Linux and Windows (with WSL2). Every step ends with a check so you know you can move on.
 
-> 📖 Want to understand the concepts first (Zero-ETL, L1/L2/L3 constructs, the traps the code solves)? Read the **"CDK Without Fear"** article on Medium: _(link to the article)_.
+> 📖 Want to understand the concepts first (Zero-ETL, L1/L2/L3 constructs, the traps the code solves)? The English article **"CDK Without Fear"** is 🚧 coming soon. In the meantime, the [Spanish version is on Medium](https://medium.com/@carlosgaonad/cdk-sin-miedo-de-aurora-postgresql-a-redshift-serverless-con-zero-etl-e9d8cea17806).
 
 ![Lab architecture](docs/images/architecture-en.jpg)
 

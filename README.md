@@ -11,7 +11,7 @@
 | | Español | English |
 |---|---|---|
 | Laboratorio paso a paso (macOS, Linux y Windows) | **[LAB.md](LAB.md)** | **[LAB.en.md](LAB.en.md)** |
-| Artículo con los conceptos (Medium) | _(enlace al artículo)_ | _(link to the article)_ |
+| Artículo con los conceptos (Medium) | **[CDK sin miedo](https://medium.com/@carlosgaonad/cdk-sin-miedo-de-aurora-postgresql-a-redshift-serverless-con-zero-etl-e9d8cea17806)** | 🚧 En construcción / Coming soon |
 
 El laboratorio explica desde la creación de la cuenta y la instalación de herramientas hasta la limpieza final, con una verificación al terminar cada paso. El resto de este README es una referencia rápida para quien ya conoce CDK.
 
